@@ -115,7 +115,7 @@ func remoteExecHostname(proxy, target, user string) {
 	}
 }
 
-func tunneledHttpGet(proxy, target, user string) {
+func tunnelHttpGet(proxy, target, user string) {
 	sshagent := sshAgent()
 	client := proxyClient(proxy, user, sshagent)
 	c := http.Client{Transport: &http.Transport{Dial: tunneler(client)}}
@@ -155,5 +155,5 @@ func main() {
 	flag.StringVar(&user, "user", "", "Provide user")
 	flag.Parse()
 	remoteExecHostname(proxy, target, user)
-	tunneledHttpGet(proxy, target, user)
+	tunnelHttpGet(proxy, target, user)
 }
