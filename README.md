@@ -4,8 +4,8 @@ This demonstrates how to execute commands and HTTP GET remotely with golang ssh.
 
 ## Running
 
-Thats how I can run it. It assumes that the user names are the same on both hosts. Target in this case is a private ip in some cloud. The proxy is reachable from your machine:
+Thats how I can run it. It assumes that the user names are the same on both hosts. The proxy needs to be accessible from your machine and the target only from the proxy:
 
 ```
-$ go run main.go -proxy 54.247.84.60 -target 10.12.8.7 -user hans
+$ go run main.go -proxy 54.0.0.1 -target 10.0.0.1 -user hans
 ```
