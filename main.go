@@ -15,7 +15,7 @@ import (
 
 type Dialer func(network, addr string) (net.Conn, error)
 
-func sshAgent() agent.Agent {
+func newAgentForSock() agent.Agent {
 	sock, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
 	if err != nil {
 		fmt.Println(err)
@@ -24,7 +24,7 @@ func sshAgent() agent.Agent {
 	return agent.NewClient(sock)
 }
 
-func sshClientConfig(agent agent.Agent, user string) *ssh.ClientConfig {
+func newConfigForAgent(agent agent.Agent, user string) *ssh.ClientConfig {
 	signers, err := agent.Signers()
 	if err != nil {
 		fmt.Println(err)
@@ -69,8 +69,8 @@ func proxiedHttpClient(client *ssh.Client) http.Client {
 	return http.Client{Transport: &http.Transport{Dial: tunneler(client)}}
 }
 
-func proxyClient(proxy, user string, sshagent agent.Agent) *ssh.Client {
-	config := sshClientConfig(sshagent, user)
+func newClientForAgent(proxy, user string, sshagent agent.Agent) *ssh.Client {
+	config := newConfigForAgent(sshagent, user)
 	client, err := ssh.Dial("tcp", proxy+":22", config)
 	if err != nil {
 		fmt.Println(err)
@@ -79,8 +79,8 @@ func proxyClient(proxy, user string, sshagent agent.Agent) *ssh.Client {
 	return client
 }
 
-func targetClient(target, user string, client *ssh.Client, sshagent agent.Agent) *ssh.Client {
-	config := sshClientConfig(sshagent, user)
+func newClientForClientAndAgent(target, user string, client *ssh.Client, sshagent agent.Agent) *ssh.Client {
+	config := newConfigForAgent(sshagent, user)
 	conn, err := client.Dial("tcp", target+":22")
 	if err != nil {
 		fmt.Println(err)
@@ -96,8 +96,8 @@ func targetClient(target, user string, client *ssh.Client, sshagent agent.Agent)
 }
 
 func remoteExecHostname(proxy, target, user string) {
-	sshagent := sshAgent()
-	client := proxyClient(proxy, user, sshagent)
+	sshagent := newAgentForSock()
+	client := newClientForAgent(proxy, user, sshagent)
 	out, err := proxiedExec("hostname", client, sshagent)
 	if err != nil {
 		fmt.Println(err)
@@ -105,7 +105,7 @@ func remoteExecHostname(proxy, target, user string) {
 	}
 	fmt.Println(string(out))
 
-	nextClient := targetClient(target, user, client, sshagent)
+	nextClient := newClientForClientAndAgent(target, user, client, sshagent)
 	out, err = proxiedExec("hostname", nextClient, sshagent)
 	if err != nil {
 		fmt.Println(err)
@@ -116,8 +116,8 @@ func remoteExecHostname(proxy, target, user string) {
 }
 
 func tunnelHttpGet(proxy, target, user string) {
-	sshagent := sshAgent()
-	client := proxyClient(proxy, user, sshagent)
+	sshagent := newAgentForSock()
+	client := newClientForAgent(proxy, user, sshagent)
 	c := http.Client{Transport: &http.Transport{Dial: tunneler(client)}}
 
 	resp, err := c.Get("http://what-is-my-ip.net/?text")
@@ -132,7 +132,7 @@ func tunnelHttpGet(proxy, target, user string) {
 	}
 	fmt.Println(string(body))
 
-	nextClient := targetClient(target, user, client, sshagent)
+	nextClient := newClientForClientAndAgent(target, user, client, sshagent)
 	c = http.Client{Transport: &http.Transport{Dial: tunneler(nextClient)}}
 
 	resp, err = c.Get("http://what-is-my-ip.net/?text")
